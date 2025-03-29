@@ -3,6 +3,13 @@
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
+-- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
+
+-- instead raise a dialog asking if you wish to save the current file(s)
+
+-- See `:help 'confirm'`
+
+vim.opt.confirm = true
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
@@ -533,16 +540,54 @@ require('lazy').setup({
         end,
       })
 
-      -- Change diagnostic symbols in the sign column (gutter)
-      -- if vim.g.have_nerd_font then
-      --   local signs = { ERROR = '', WARN = '', INFO = '', HINT = '' }
-      --   local diagnostic_signs = {}
-      --   for type, icon in pairs(signs) do
-      --     diagnostic_signs[vim.diagnostic.severity[type]] = icon
-      --   end
-      --   vim.diagnostic.config { signs = { text = diagnostic_signs } }
-      -- end
+      -- Diagnostic Config
 
+      -- See :help vim.diagnostic.Opts
+
+      vim.diagnostic.config {
+
+        severity_sort = true,
+
+        float = { border = 'rounded', source = 'if_many' },
+
+        underline = { severity = vim.diagnostic.severity.ERROR },
+
+        signs = vim.g.have_nerd_font and {
+
+          text = {
+
+            [vim.diagnostic.severity.ERROR] = '󰅚 ',
+
+            [vim.diagnostic.severity.WARN] = '󰀪 ',
+
+            [vim.diagnostic.severity.INFO] = '󰋽 ',
+
+            [vim.diagnostic.severity.HINT] = '󰌶 ',
+          },
+        } or {},
+
+        virtual_text = {
+
+          source = 'if_many',
+
+          spacing = 2,
+
+          format = function(diagnostic)
+            local diagnostic_message = {
+
+              [vim.diagnostic.severity.ERROR] = diagnostic.message,
+
+              [vim.diagnostic.severity.WARN] = diagnostic.message,
+
+              [vim.diagnostic.severity.INFO] = diagnostic.message,
+
+              [vim.diagnostic.severity.HINT] = diagnostic.message,
+            }
+
+            return diagnostic_message[diagnostic.severity]
+          end,
+        },
+      }
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
       --  When you add nvim-cmp, luasnip, etc. Neovim now has *more* capabilities.
@@ -568,7 +613,7 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        pyright = {},
+        -- pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -625,6 +670,8 @@ require('lazy').setup({
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
       require('mason-lspconfig').setup {
+        ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
+        automatic_installation = false,
         handlers = {
           function(server_name)
             local server = servers[server_name] or {}
